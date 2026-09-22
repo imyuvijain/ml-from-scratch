@@ -38,7 +38,7 @@ impl Bird {
         let radius = 30.0;
         let survival_frames: u32 = 0;
         let score = 0;
-        let nn = Network::create(&[4,16,8,1]);
+        let nn = Network::create(&[5,10,1]);
         let is_alive = true;
 
         Bird {x, y, vy, radius, survival_frames, score, nn, is_alive}
@@ -59,9 +59,9 @@ impl Bird {
 
     fn draw(&self, index: usize) {
 
-        let n = 255-(index) as u8;
+        let n = (index) as u8;
 
-        draw_circle(self.x, self.y, self.radius, Color::from_rgba(n, n, n, 150));
+        draw_circle(self.x, self.y, self.radius, Color::from_rgba(n, n, 255, 150));
     }
 
     fn move_bird(&mut self, dt: f32) {
@@ -95,8 +95,9 @@ impl Bird {
         let distance = (pipe.x - self.x).clamp(0.0, WIDTH)/WIDTH;
 
         let pipe_height = pipe.height/HEIGHT;
+        let y_distance = bird_y - pipe_height;
 
-        vec![bird_y, bird_vy, distance, pipe_height]
+        vec![bird_y, bird_vy, distance, pipe_height, y_distance]
     }
 
 
@@ -105,15 +106,15 @@ impl Bird {
 impl Pipe {
     fn create(height: f32) -> Self {
         let pipe_width = 100.0;
-        Pipe {height: height, width: 80.0, gap: 130.0, x: WIDTH-pipe_width}
+        Pipe {height: height, width: 80.0, gap: 200.0, x: WIDTH-pipe_width}
     }
 
     fn draw(&self) {
 
-        draw_rectangle(self.x, 0.0, self.width, self.height, GREEN);
+        draw_rectangle(self.x, 0.0, self.width, self.height, RED);
 
         let second_height = self.height+self.gap;
-        draw_rectangle(self.x, second_height, self.width, HEIGHT-second_height, GREEN);
+        draw_rectangle(self.x, second_height, self.width, HEIGHT-second_height, RED);
 
     }
 
@@ -144,10 +145,10 @@ impl Pipe {
 
 pub async fn run() {
 
-    let bot_mode = false;
+    let bot_mode = true;
 
     if bot_mode {
-        let count = 500;
+        let count = 1000;
 
         let mut birds: Vec<Bird> = (0..count).map(|_| Bird::create()).collect::<Vec<_>>();
 
@@ -164,7 +165,8 @@ pub async fn run() {
             
 
             loop {
-                clear_background(SKYBLUE);
+                // clear_background(SKYBLUE);
+                clear_background(BLACK);
                 draw_text(&format!("FPS: {}", get_fps()), 10.0, 20.0, 40.0, WHITE);
                 draw_text(&format!("Birds: {} / {}", alive_count, count), 10.0, 80.0, 40.0, WHITE);
                 draw_text(&format!("Evolution {}", evolution_count), 10.0, 120.0, 40.0, WHITE);
