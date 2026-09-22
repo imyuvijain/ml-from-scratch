@@ -1,64 +1,68 @@
-# finch
+# Machine Learning from Scratch
 
-A machine learning library I'm writing from scratch in Rust. No `tch`, no `candle`, no `ndarray` — just `Vec<f32>` and whatever math I can work out myself.
+I'm writing a small machine learning library in Rust without using any ML crates. No `tch`, no `candle`, no `ndarray`. Everything is built on `Vec<f32>` and math I work out myself.
 
-It isn't meant to be a crate anyone depends on. I'm using it to learn Rust and machine learning at the same time, which means writing the networks, the training loops, and the games they play. **All of it by hand, with no AI involved.** More on that below.
+I don't plan on publishing this anywhere. It exists so I can learn Rust and machine learning at the same time, which means I write the networks, the training loops and the games they play. I write all of it by hand and I don't use AI for any of it. There's more about that further down.
 
 ## What it does right now
 
-It plays Flappy Bird. 1000 birds spawn with random weights and all play the same pipe at once, and the ones that live longest get to have children.
+It plays Flappy Bird. A thousand birds start with random weights and they all play the same pipe at the same time. The ones that survive longest get to have children.
 
-Generation 0. These are random networks, so most of the population is dead before the first pipe even shows up:
+This is generation 0. The networks are random so most of the birds are dead before the first pipe even arrives.
 
-![Generation 0: 94 of 1000 birds alive, score 0](assets/generation-0.png)
+![Generation 0, 94 of 1000 birds alive, score 0](assets/generation-0.png)
 
-Generation 1, after one round of selection and mutation:
+And this is generation 1, after one round of selection and mutation.
 
-![Generation 1: 4 birds alive, score 20](assets/generation-1.png)
+![Generation 1, 4 birds alive, score 20](assets/generation-1.png)
 
-Score 20 after a single generation. No training data, no labels, no gradients. Just killing off the birds that crashed early.
+A score of 20 after a single generation. There's no training data in this and no labels and no gradients. The only thing that happens is the birds that crashed early stop having children.
 
-## No AI wrote any of this code
+## I don't use AI to write this code
 
 I type all of it myself. No Copilot, no Cursor, no ChatGPT, no Claude.
 
-This is the whole reason the project exists. If I let a model write backprop for me I'd end up with code that works and no idea why, and then I'd have learned nothing. I'd rather write a slow, wrong version, watch it break, and work out what I got wrong. That part is the point. The finished code is mostly a byproduct.
+That's most of the reason I started the project in the first place. If I got a model to write backprop for me I'd end up with working code sitting in front of me that I didn't understand, which defeats the whole purpose of doing it. I'd rather write a slow broken version, watch it fail and spend an afternoon working out what I did wrong. The code at the end of that matters a lot less to me than the part where I figure it out.
 
-So when something in here looks naive, it's because I haven't learned that bit yet. The bugs are mine and so are the fixes.
+So when something in here looks naive it's usually because I haven't got to that part yet. The bugs are mine and so are the fixes.
 
 ## How the evolution works
 
-Each bird has a `5 → 10 → 1` network. The inputs are its height, its velocity, how far it is from the pipe horizontally, the height of the pipe's gap, and the vertical distance between the bird and that gap. If the output comes out above 0, it flaps.
+Every bird has a `5 → 10 → 1` network. It takes in the bird's height, its velocity, how far away the pipe is, the height of the gap in the pipe, and the vertical distance between the bird and that gap. If the output comes out above 0 the bird flaps.
 
-When the last bird dies I sort the population by how many frames each one survived and take the top 20. Those become the parents. How many children each one gets depends on its rank, so the best bird gets about 20/210 of the next generation and the 20th gets about 1/210. Every parent keeps one unmutated clone of itself in the next generation and the rest of its children get mutated. Mutation is per weight: an 80% chance to nudge it by up to ±0.05, or ±0.1 for biases.
+Once the last bird dies I sort them by how many frames they survived and keep the top 20 as parents. How many children a parent gets depends on where it ranked, so the best bird produces around 20/210 of the next generation and the worst of the 20 produces around 1/210. Each parent passes on one exact copy of itself and the rest of its children get mutated. Mutation walks through every weight with an 80% chance of nudging it by up to 0.05 in either direction, and 0.1 for the biases.
 
-`Enter` kills the current generation early. `Escape` dumps the two best networks and quits.
+Pressing Enter kills the generation early. Escape prints the two best networks and quits.
 
-If you'd rather play it yourself with the spacebar, set `bot_mode` to `false` in [`src/flappybird/mod.rs`](src/flappybird/mod.rs).
+There's a `bot_mode` flag in [`src/flappybird/mod.rs`](src/flappybird/mod.rs). Set it to false and you can play the game yourself with the spacebar.
 
-The network itself ([`src/network.rs`](src/network.rs)) is about 90 lines. Dense layers, random init between -0.5 and 0.5, a forward pass, `tanh` on the output, and the mutation function. It derives `Serialize`/`Deserialize` so populations can be saved.
+The network code is in [`src/network.rs`](src/network.rs) and it's about 90 lines. Dense layers, random starting weights between -0.5 and 0.5, a forward pass, tanh on the output, and the mutation function. It derives Serialize and Deserialize so I can save populations.
 
-## What isn't finished
+## What isn't done
 
-Most of it. This is early.
+Most of it, honestly.
 
-**Pong** ([`src/pong/mod.rs`](src/pong/mod.rs)) has a ball and a paddle that bounces around, but it isn't wired into `main.rs` and nothing is learning to play it yet.
+Pong has a ball and a paddle moving around but it isn't hooked up to `main.rs` yet and nothing is learning to play it.
 
-**Backprop** ([`src/backprop/mod.rs`](src/backprop/mod.rs)) is meant to fit a polynomial to a target curve using gradient descent, as a visual warm-up before I try it on the actual network. Right now `update()` is a comment saying `//NEED TO WORK HERE`. It doesn't compile and it's commented out of `main.rs`.
+Backprop is supposed to fit a polynomial to a target curve using gradient descent, so I can watch it working before I try the same thing on the network itself. At the moment `update()` is an empty function with a comment in it that says NEED TO WORK HERE. It doesn't compile and it's commented out of `main.rs`.
 
-**`models.json`** holds saved populations from older runs, 10 generations and 191 generations. The code that saved them isn't in the tree anymore.
+`models.json` has saved populations in it from older runs, one with 10 generations and one with 191. The code that wrote those files isn't in the repo anymore.
 
 ## What I want to add
 
-Roughly in this order:
+Backpropagation is the next big one. Real gradient descent, so this isn't only evolution. I'll get the curve fitting demo working first and then move it onto the network.
 
-- **Backpropagation.** Real gradient descent, so this isn't purely evolutionary. The curve demo first, then the network.
-- Activations as an enum (ReLU, sigmoid, tanh) instead of `tanh` hardcoded, and better weight init. `rand_distr` is already in `Cargo.toml` for this.
-- Loss functions, then an optimizer of some kind. SGD, then momentum, then Adam if I get that far.
-- **Reinforcement learning.** Q-learning, then DQN, then policy gradients. This is the big one and probably where most of the time goes.
-- Headless training, so it isn't stuck at 60fps because everything runs inside the render loop. `rayon` for evaluating birds in parallel.
-- Saving and loading models again, properly this time.
-- More games. Finish Pong, then snake, and maybe chess. Chess is a much bigger problem than the others and I might be getting ahead of myself there.
+After that, activation functions as an enum so I can choose between ReLU and sigmoid and tanh instead of having tanh hardcoded everywhere, and better starting weights. `rand_distr` is already in `Cargo.toml` for that.
+
+Then loss functions and some kind of optimizer. SGD first, then momentum, then Adam if I get that far.
+
+Reinforcement learning is the part I'm most interested in. Q-learning, then DQN, then policy gradients. I expect most of my time to end up going here.
+
+At some point I need to get the training out of the render loop so it isn't capped at 60fps, and use rayon to evaluate birds in parallel.
+
+Saving and loading models again, done properly this time.
+
+More games after that. Pong needs finishing, then snake. I've been thinking about chess but it's a much harder problem than any of these and I'm probably getting ahead of myself there.
 
 ## Running it
 
@@ -66,14 +70,14 @@ Roughly in this order:
 cargo run --release
 ```
 
-Use `--release`. 1000 birds per frame in a debug build is painful.
+Use release mode. A thousand birds per frame in a debug build is painful.
 
-Rust 2024 edition, with [macroquad](https://macroquad.rs/) doing the rendering.
+It's Rust 2024 edition and macroquad does the rendering.
 
 ## Notes to self
 
-Fitness is survival frames, not score. It works, but a bird that hovers in a safe spot scores the same as one that actually gets through pipes.
+Fitness is based on how many frames a bird survived rather than its score. It works, but a bird that sits still in a safe spot gets rewarded the same as one that's getting through pipes.
 
-`calculate()` only applies `tanh` at the very end, so there's no nonlinearity between the hidden layers and they collapse into one linear map. It still plays Flappy Bird fine, since the problem is close to linearly separable, but the hidden layer isn't earning its place. Fix this first.
+`calculate()` only runs tanh at the very end, so there's nothing nonlinear between the hidden layers and they collapse into a single linear map. It still plays Flappy Bird well enough because the problem is close to linearly separable, but the hidden layer isn't doing anything for me. First thing to fix.
 
-Diversity in the population dies off fast. Worth trying crossover, or mutation rates that adapt over time.
+The population loses its diversity quickly. I should try crossover, or mutation rates that change as it goes along.
