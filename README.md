@@ -22,7 +22,7 @@ No training data, no labels, no gradients. The birds that crash early just stop 
 
 ## How the evolution works
 
-Every bird has a `5 → 10 → 1` network. It takes in the bird's height, its velocity, how far away the pipe is, the height of the gap, and the vertical distance between the bird and that gap. If the output comes out above 0 the bird flaps.
+In this version, every bird has a `5 → 10 → 1` network. It takes in the bird's height, its velocity, how far away the pipe is, the height of the gap, and the vertical distance between the bird and that gap. If the output comes out above 0 the bird flaps.
 
 Once the last bird dies I sort them by how many frames they survived and keep the top 20 as parents. How many children a parent gets depends on where it ranked. Each parent passes on one exact copy of itself and the rest of its children get mutated.
 
