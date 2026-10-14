@@ -106,7 +106,7 @@ impl Bird {
 impl Pipe {
     fn create(height: f32) -> Self {
         let pipe_width = 100.0;
-        Pipe {height: height, width: 80.0, gap: 200.0, x: WIDTH-pipe_width}
+        Pipe {height: height, width: 80.0, gap: 140.0, x: WIDTH-pipe_width}
     }
 
     fn draw(&self) {
