@@ -39,7 +39,9 @@ After that, activation functions as an enum, loss functions and an optimizer, an
 ## Running it
 
 ```bash
-cargo run --release
+cargo run --release --example flappy
+cargo run --release --example polyfit
+cargo run --release --example pong
 ```
 
 Rust 2024 edition, macroquad for the rendering.

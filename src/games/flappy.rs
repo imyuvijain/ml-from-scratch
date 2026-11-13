@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 use ::rand::random_range;
-use crate::network::{Network};
+use crate::evo::network::{Network};
 use std::cmp::max;
 
 //CONSTANTS

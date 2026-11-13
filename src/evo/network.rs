@@ -30,16 +30,22 @@ pub struct Network {
     layers: Vec<Layer>,
 }
 
+enum Activation {
+    Tanh,
+    Sigmoid,
+    ReLU,
+}
+
 impl Network {
     pub fn calculate(&self, input: &Vec<f32>) -> Vec<f32> {
 
         let mut values: Vec<f32> = input.clone();
 
         for layer in &self.layers {
-            values = Self::dot(&values, layer);
+            values = Self::dot(&values, layer).iter().map(|x: &f32| x.tanh()).collect();
         }
 
-        values.iter().map(|x| x.tanh()).collect()
+        values
 
     }
 

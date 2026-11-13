@@ -183,3 +183,18 @@ pub async fn run() {
         next_frame().await
     }
 }
+
+fn window_conf() -> Conf {
+    Conf {
+        window_title: "Back Prop".to_string(),
+        window_width: WIDTH as i32,
+        window_height: HEIGHT as i32,
+        window_resizable: false,
+        ..Default::default()
+    }
+}
+
+#[macroquad::main(window_conf)]
+async fn main() {
+    run().await;
+}
