@@ -1,13 +1,12 @@
-use macroquad::prelude::*;
+use crate::evo::network::Network;
 use ::rand::random_range;
-use crate::evo::network::{Network};
+use macroquad::prelude::*;
 use std::cmp::max;
 
 //CONSTANTS
 const GRAVITY: f32 = 0.4;
 pub const HEIGHT: f32 = 800.0;
 pub const WIDTH: f32 = 1200.0;
-
 
 //STRUCTS
 #[derive(Debug)]
@@ -32,16 +31,25 @@ struct Pipe {
 //IMPLEMENATIONS
 impl Bird {
     fn create() -> Self {
-        let x = WIDTH/3.0;
+        let x = WIDTH / 3.0;
         let y = 100.0;
         let vy = 5.0;
         let radius = 30.0;
         let survival_frames: u32 = 0;
         let score = 0;
-        let nn = Network::create(&[5,10,1]);
+        let nn = Network::create(&[5, 10, 1]);
         let is_alive = true;
 
-        Bird {x, y, vy, radius, survival_frames, score, nn, is_alive}
+        Bird {
+            x,
+            y,
+            vy,
+            radius,
+            survival_frames,
+            score,
+            nn,
+            is_alive,
+        }
     }
 
     fn create_with_network(nn: Network) -> Self {
@@ -58,15 +66,19 @@ impl Bird {
     }
 
     fn draw(&self, index: usize) {
-
         let n = (index) as u8;
 
-        draw_circle(self.x, self.y, self.radius, Color::from_rgba(n, n, 255, 150));
+        draw_circle(
+            self.x,
+            self.y,
+            self.radius,
+            Color::from_rgba(n, n, 255, 150),
+        );
     }
 
     fn move_bird(&mut self, dt: f32) {
         self.y += self.vy * dt * 60.0;
-        self.vy += GRAVITY*dt*60.0;
+        self.vy += GRAVITY * dt * 60.0;
         self.survival_frames += 1;
     }
 
@@ -75,76 +87,75 @@ impl Bird {
     }
 
     fn detect_collision(&self, pipe: &Pipe) -> bool {
-
         let out_of_bounds = (self.y + self.radius > HEIGHT) || (self.y - self.radius < 0.0);
-        let in_pipe_x = (self.x + self.radius > pipe.x) && (self.x - self.radius < pipe.x + pipe.width);
+        let in_pipe_x =
+            (self.x + self.radius > pipe.x) && (self.x - self.radius < pipe.x + pipe.width);
 
         let gap_top = pipe.height;
         let gap_bottom = pipe.height + pipe.gap;
         let in_pipe_y = (self.y - self.radius < gap_top) || (self.y + self.radius > gap_bottom);
 
         out_of_bounds || (in_pipe_x && in_pipe_y)
-
     }
 
     fn get_inputs(&self, pipe: &Pipe) -> Vec<f32> {
-        
         let bird_y = self.y / HEIGHT;
         let bird_vy = (self.vy + 8.0) / 35.0;
 
-        let distance = (pipe.x - self.x).clamp(0.0, WIDTH)/WIDTH;
+        let distance = (pipe.x - self.x).clamp(0.0, WIDTH) / WIDTH;
 
-        let pipe_height = pipe.height/HEIGHT;
+        let pipe_height = pipe.height / HEIGHT;
         let y_distance = bird_y - pipe_height;
 
         vec![bird_y, bird_vy, distance, pipe_height, y_distance]
     }
-
-
 }
 
 impl Pipe {
     fn create(height: f32) -> Self {
         let pipe_width = 100.0;
-        Pipe {height: height, width: 80.0, gap: 140.0, x: WIDTH-pipe_width}
+        Pipe {
+            height: height,
+            width: 80.0,
+            gap: 140.0,
+            x: WIDTH - pipe_width,
+        }
     }
 
     fn draw(&self) {
-
         draw_rectangle(self.x, 0.0, self.width, self.height, RED);
 
-        let second_height = self.height+self.gap;
-        draw_rectangle(self.x, second_height, self.width, HEIGHT-second_height, RED);
-
+        let second_height = self.height + self.gap;
+        draw_rectangle(
+            self.x,
+            second_height,
+            self.width,
+            HEIGHT - second_height,
+            RED,
+        );
     }
 
-    fn move_pipe(&mut self, dt: f32) -> bool{
-        let speed: f32 = 10.0*dt*60.0;
-        
+    fn move_pipe(&mut self, dt: f32) -> bool {
+        let speed: f32 = 10.0 * dt * 60.0;
+
         let mut passed = false;
 
         self.x = {
             if self.x <= speed {
-                self.height = random_range((self.gap+50.0)..(HEIGHT - self.gap - 100.0));
-                
-                passed = true;
-                WIDTH+speed
+                self.height = random_range((self.gap + 50.0)..(HEIGHT - self.gap - 100.0));
 
+                passed = true;
+                WIDTH + speed
             } else {
                 self.x - speed
             }
         };
 
         passed
-
     }
-
 }
 
-
-
 pub async fn run() {
-
     let bot_mode = true;
 
     if bot_mode {
@@ -159,17 +170,26 @@ pub async fn run() {
         let mut score = 0;
 
         'outer: loop {
-
-            let mut pipe = Pipe::create(HEIGHT/2.0);
-            
-            
+            let mut pipe = Pipe::create(HEIGHT / 2.0);
 
             loop {
                 // clear_background(SKYBLUE);
                 clear_background(BLACK);
                 draw_text(&format!("FPS: {}", get_fps()), 10.0, 20.0, 40.0, WHITE);
-                draw_text(&format!("Birds: {} / {}", alive_count, count), 10.0, 80.0, 40.0, WHITE);
-                draw_text(&format!("Evolution {}", evolution_count), 10.0, 120.0, 40.0, WHITE);
+                draw_text(
+                    &format!("Birds: {} / {}", alive_count, count),
+                    10.0,
+                    80.0,
+                    40.0,
+                    WHITE,
+                );
+                draw_text(
+                    &format!("Evolution {}", evolution_count),
+                    10.0,
+                    120.0,
+                    40.0,
+                    WHITE,
+                );
                 draw_text(&format!("Score {}", score), 10.0, 160.0, 40.0, WHITE);
 
                 if alive_count <= 0 {
@@ -211,7 +231,6 @@ pub async fn run() {
                         .collect();
 
                     break;
-
                 }
 
                 pipe.draw();
@@ -223,108 +242,101 @@ pub async fn run() {
                 }
 
                 for (index, bird) in birds.iter_mut().enumerate() {
-                    
                     if !bird.is_alive {
                         continue;
                     }
-        
+
                     {
                         bird.draw(index);
-            
-                        
-            
+
                         bird.move_bird(dt);
-            
-                        if pipe_passed { // returns whether the pipe passed
+
+                        if pipe_passed {
+                            // returns whether the pipe passed
                             bird.score = score;
                         };
                     }
-            
+
                     //reset
                     if bird.detect_collision(&pipe) {
                         alive_count -= 1;
                         bird.is_alive = false;
                     }
-            
+
                     let inputs = bird.get_inputs(&pipe);
-            
+
                     let nn_output = bird.nn.calculate(&inputs)[0];
-            
+
                     if nn_output > 0.0 {
                         bird.jump();
                     };
-        
                 }
-        
+
                 if is_key_pressed(KeyCode::Enter) {
                     alive_count = 0;
                 }
-        
+
                 if is_key_pressed(KeyCode::Escape) {
-                    
                     birds.sort_by(|a, b| b.survival_frames.cmp(&a.survival_frames));
-                    
+
                     for bird in &birds[0..2] {
                         dbg!(&bird.nn);
                     }
 
                     break 'outer;
                 }
-        
+
                 next_frame().await
             }
+        } // dbg!(birds);
+    } else {
+        let mut high_score = 0;
 
-
-
-        }// dbg!(birds);
-    }    
-    else {    let mut high_score = 0;
-        
         'outer: loop {
-        
             let mut score = 0;
-        
-            let mut pipe = Pipe::create(HEIGHT/2.0);
-            
+
+            let mut pipe = Pipe::create(HEIGHT / 2.0);
+
             let mut bird = Bird::create();
-        
+
             loop {
                 clear_background(SKYBLUE);
                 draw_text(&format!("FPS: {}", get_fps()), 10.0, 20.0, 40.0, WHITE);
-                draw_text(&format!("Score: {} Max Score: {}", score, high_score), 10.0, 50.0, 40.0, WHITE);
-                
-                
+                draw_text(
+                    &format!("Score: {} Max Score: {}", score, high_score),
+                    10.0,
+                    50.0,
+                    40.0,
+                    WHITE,
+                );
+
                 pipe.draw();
                 let dt = get_frame_time();
                 if pipe.move_pipe(dt) {
                     score += 1;
                     high_score = max(score, high_score);
                 }
-            
+
                 bird.draw(0);
                 bird.move_bird(dt);
-        
+
                 if bird.detect_collision(&pipe) {
                     break;
                 }
-        
+
                 if is_key_pressed(KeyCode::Space) {
-                        bird.jump();
-                    };
-        
+                    bird.jump();
+                };
+
                 if is_key_pressed(KeyCode::Escape) {
-        
                     break 'outer;
                 }
-        
+
                 next_frame().await
             }
-        
         }
     }
 }
-
-
 
 // [src/flappybird/mod.rs:263:21] &bird.nn = Network {
 //     layers: [
@@ -623,5 +635,3 @@ pub async fn run() {
 //         },
 //     ],
 // }
-
-
