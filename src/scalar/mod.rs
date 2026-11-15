@@ -4,14 +4,25 @@ use std::{
     process::Output,
 };
 
-use rand_distr::num_traits::Pow;
 
 //tape that logs every node/layer
 thread_local! {
     static TAPE: RefCell<Vec<Node>> = RefCell::new(Vec::new());
 }
 
-#[derive(Clone, Copy)]
+
+pub fn zero_grads() {
+        TAPE.with(|tape| {
+            let mut t = tape.borrow_mut();
+
+            for node in t.iter_mut() {
+                node.grad = 0.0;
+            }
+
+        })
+}
+
+#[derive(Clone, Copy, Debug)]
 enum Op {
     Leaf,
     Add(usize, usize),
@@ -21,13 +32,21 @@ enum Op {
     Pow(usize, f32),
     Relu(usize),
 }
-#[derive(Clone, Copy)]
+
+
+//NODE 
+#[derive(Clone, Copy, Debug)]
 struct Node {
     data: f32, //result
     grad: f32, // gradient
     op: Op,    //
 }
 
+impl Node {
+    
+}
+
+//NODE VALUE
 #[derive(Clone, Copy, Debug)]
 pub struct Value(usize);
 
@@ -87,6 +106,47 @@ impl Value {
     pub fn pow(self, n: f32) -> Value {
         Value::push(self.data().powf(n), Op::Pow(self.0, n))
     }
+
+    pub fn backwards(self) {
+        TAPE.with(|tape| {
+            let mut t = tape.borrow_mut();
+            t[self.0].grad = 1.0;
+
+            
+            for i in (0..=self.0).rev() {
+                let node = t[i];
+                let g = node.grad;
+
+                match node.op {
+                    Op::Leaf => {}
+                    Op::Add(p, q) => {
+                        t[p].grad += g;
+                        t[q].grad += g;
+                    }
+                    Op::Mul(p, q) => {
+                        t[q].grad += t[p].data * g;
+                        t[p].grad += t[q].data * g;
+                    }
+                    Op::Tanh(p) => {
+                        t[p].grad += (1.0 - node.data * node.data) * g;
+                    }
+                    Op::Exp(p) => {
+                        t[p].grad += node.data * g;
+                    }
+                    Op::Relu(p) => {
+                        if t[p].data > 0.0 {
+                            t[p].grad += g;
+                        }
+                    }
+                    Op::Pow(p, n) => {
+                        t[p].grad += n * t[p].data.powf(n - 1.0) * g;
+                    }
+                }
+
+            }
+
+        })
+    }
 }
 
 impl Add for Value {
@@ -108,7 +168,7 @@ impl Mul for Value {
     type Output = Value;
 
     fn mul(self, rhs: Value) -> Value {
-        Value::push(self.data() * rhs.data(), Op::Add(self.0, rhs.0))
+        Value::push(self.data() * rhs.data(), Op::Mul(self.0, rhs.0))
     }
 }
 
@@ -147,19 +207,46 @@ mod tests {
     }
 
     #[test]
-    fn forward_ops() {
+    fn forward_ops_test() {
         let tol = 1e-6;
 
-        let t = ((Value::new(2.0) * Value::new(3.0)) + 1.0).tanh();
-        assert_close(t.data(), 7.0_f32.tanh(), tol);
+        let t1 = ((Value::new(2.0) * Value::new(3.0)) + 1.0).tanh();
+        assert_close(t1.data(), 7.0_f32.tanh(), tol);
 
-        let s = Value::new(5.0) - Value::new(3.0);
-        assert_close(s.data(), 2.0, tol);
+        let t2 = Value::new(5.0) - Value::new(3.0);
+        assert_close(t2.data(), 2.0, tol);
 
         assert_close(Value::new(-2.0).relu().data(), 0.0, tol);
         assert_close(Value::new(4.0).relu().data(), 4.0, tol);
 
         assert_close(Value::new(0.0).exp().data(), 1.0, tol);
         assert_close(Value::new(3.0).pow(2.0).data(), 9.0, tol);
+
     }
+
+    #[test]
+    fn backwards_test() {
+
+        let tol = 1e-6;
+
+        let c = Value::new(3.0);
+        let c_output = c.pow(2.0);
+        c_output.backwards();
+        
+        assert_close(c.grad(), 6.0, tol);
+
+        let a = Value::new(2.0);
+        let b = Value::new(5.0);
+        let ab_output = a * b + a;
+
+        ab_output.backwards();
+
+        assert_close(a.grad(), 6.0, tol);
+        assert_close(b.grad(), 2.0, tol);
+
+    }
+    
 }
+        
+
+
