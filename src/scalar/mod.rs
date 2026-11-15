@@ -1,3 +1,5 @@
+pub mod gradcheck;
+
 use std::{
     cell::RefCell,
     ops::{Add, Mul, Neg, Sub},
@@ -243,8 +245,34 @@ mod tests {
 
         assert_close(a.grad(), 6.0, tol);
         assert_close(b.grad(), 2.0, tol);
+    }
+
+    #[test]
+    fn backwards_grad_test() {
+
+        let tol = 1e-2;
+
+        let a = Value::new(0.7);
+        let b = Value::new(-1.3);
+
+        let output = (a*b + a.pow(2.0)).tanh();
+        output.backwards();
+
+
+        let h = 1e-3;
+        let grad = gradcheck::numeric_grad(|v| {
+
+            let (p, q) = (Value::new(v[0]), Value::new(v[1]));
+
+            (p * q + p.pow(2.0)).tanh().data()
+
+        }, &[0.7, -1.3], h);
+
+        assert_close(grad[0], a.grad(), tol);
+        assert_close(grad[1], b.grad(), tol);
 
     }
+
     
 }
         
