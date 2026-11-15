@@ -3,7 +3,6 @@ pub mod gradcheck;
 use std::{
     cell::RefCell,
     ops::{Add, Mul, Neg, Sub},
-    process::Output,
 };
 
 
@@ -22,6 +21,26 @@ pub fn zero_grads() {
             }
 
         })
+}
+
+fn _display_tape() {
+    TAPE.with(|tape| {
+            let t = tape.borrow();
+
+            for node in t.iter() {
+                dbg!(node);
+            }
+        })
+}
+
+pub fn tape_len() -> usize {
+    TAPE.with(|tape| {
+            tape.borrow().len()
+    })
+}
+
+pub fn truncate_tape(len: usize) {
+    TAPE.with(|tape| {tape.borrow_mut().truncate(len);})
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -273,6 +292,24 @@ mod tests {
 
     }
 
+    #[test]
+    fn truncate_test() {
+
+        let a = Value::new(5.0);
+        let b = Value::new(10.0);
+        let c = Value::new(2.0);
+
+        let old_length = tape_len();
+
+        let ab_output = a+b;
+        let _c_output = c*ab_output;
+
+        truncate_tape(old_length);
+
+        assert_eq!(tape_len(), old_length);
+        assert_eq!(a.data(), 5.0);
+        assert_eq!(c.data(), 2.0);
+    }
     
 }
         

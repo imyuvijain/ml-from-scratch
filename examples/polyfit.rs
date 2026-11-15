@@ -1,4 +1,5 @@
 use macroquad::prelude::*;
+use nn::scalar::{Value, tape_len, truncate_tape, zero_grads};
 
 pub const HEIGHT: f32 = 800.0;
 pub const WIDTH: f32 = 1200.0;
@@ -6,7 +7,7 @@ pub const X_SCALE: f32 = 100.0;
 pub const Y_SCALE: f32 = 100.0;
 
 const X_NORM: f32 = 5.0;
-const LEARNING_RATE: f32 = 0.1;
+const LEARNING_RATE: f32 = 0.05;
 const STEPS_PER_FRAME: usize = 10;
 
 // STRUCTS
@@ -23,32 +24,36 @@ impl Point {
 }
 
 struct Curve {
-    coeffs: Vec<f32>,
+    coeffs: Vec<Value>,
+    n_params: usize,
     thickness: f32,
 }
 
 impl Curve {
-    fn create(coeffs: Vec<f32>) -> Self {
+    fn create(coeffs: Vec<Value>, n_params: usize) -> Self {
+
         Curve {
             coeffs,
+            n_params,
             thickness: 3.0,
         }
     }
 
-    fn f(&self, x: f32) -> f32 {
+    fn f(&self, x: f32) -> Value {
         let u = x / X_NORM;
-        self.coeffs
+        let data = self.coeffs
             .iter()
             .enumerate()
-            .map(|(i, c)| c * u.powi(i as i32))
-            .sum()
+            .map(|(i, c)| c.data() * u.powi(i as i32))
+            .sum();
+        Value::new(data)
     }
 
     fn draw(&self) {
         let mut prev: Option<(f32, f32)> = None;
         for sx in 0..(WIDTH as i32) {
             let x = (sx as f32 - WIDTH / 2.0) / X_SCALE;
-            let (px, py) = to_screen(x, self.f(x));
+            let (px, py) = to_screen(x, self.f(x).data());
             if let Some((lx, ly)) = prev {
                 draw_line(lx, ly, px, py, self.thickness, RED);
             }
@@ -57,19 +62,33 @@ impl Curve {
     }
 
     fn update(&mut self, target: &[Point]) -> f32 {
-        let mut loss = 0.0;
+        let mut loss = Value::new(0.0);
 
+        // Calculate error
         for point in target {
             let u = point.x / X_NORM;
-            let error = self.f(point.x) - point.y;
-            loss += error * error;
-
-            for (i, coeff) in self.coeffs.iter_mut().enumerate() {
-                *coeff -= LEARNING_RATE * error * u.powi(i as i32);
+            let mut prediction = Value::new(0.0);
+            for (i, c) in self.coeffs.iter().enumerate() {
+                prediction = prediction + *c * (u.powi(i as i32));
             }
+            let error = prediction + -point.y;
+            loss = loss + error.pow(2.0) * 0.5;
         }
 
-        loss / (target.len() as f32).max(1.0)
+        // Calculate gradients
+        loss.backwards();
+
+        // Update values
+        for c in self.coeffs.iter_mut() {
+            c.set_data(c.data() - (c.grad() * LEARNING_RATE));
+        }
+
+        // Reset
+        let loss_value = loss.data();
+        zero_grads();
+        truncate_tape(self.n_params as usize);
+
+        loss_value * 1.0/((target.len().max(1)) as f32)
     }
 }
 
@@ -151,7 +170,9 @@ pub async fn run() {
         Point { x: 4.275, y: 3.268 },
     ];
 
-    let mut model_curve = Curve::create(vec![0.0; 6]);
+    let coeffs: Vec<Value> = (0..6).map(|_| Value::new(0.0)).collect();
+    let n_params = tape_len();
+    let mut model_curve = Curve::create(coeffs, n_params);
     let mut epoch: usize = 0;
     let mut loss = 0.0;
 
