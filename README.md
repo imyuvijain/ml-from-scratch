@@ -1,14 +1,57 @@
 # Machine Learning from Scratch
 
-I'm writing a small machine learning library in Rust without using any ML crates. No `tch`, no `candle`, no `ndarray`. Everything is built on `Vec<f32>` and math I work out myself.
+I'm building a small PyTorch-style deep learning framework in Rust: tensors, automatic differentiation, layers, optimizers, and eventually reinforcement learning agents that play games I wrote myself.
+
+There are no ML crates. No `tch`, no `candle`, no `ndarray`. Everything is built on `Vec<f32>` and math I work out myself.
 
 I don't plan on publishing this. It exists so I can learn Rust and machine learning at the same time.
 
 None of the code in this repository was written by AI. I type all of it myself. That's the point of the project, because code I didn't write is code I didn't learn anything from.
 
-## What it does right now
+## Where it is
 
-It plays Flappy Bird. A thousand birds start with random weights and play the same pipe at the same time, and the ones that survive longest get to have children.
+| Phase | What | Status |
+| --- | --- | --- |
+| 0 | Library crate, examples, test harness | Done |
+| 1 | Scalar autograd | In progress: backward pass, gradient check and polynomial fit done, XOR MLP next |
+| 2 | Tensors: shape, strides, broadcasting, matmul | Not started |
+| 3 | Tensor autograd, every op gradient-checked | Not started |
+| 4 | `nn` modules, SGD and Adam, MNIST | Not started |
+| 5 | Fast matmul: loop order, tiling, rayon, benchmarks | Not started |
+| 6 | Reinforcement learning: Q-learning, DQN, REINFORCE | Not started |
+| 7 | Browser demo, CNN, tiny GPT | Not started |
+
+## Autograd
+
+The core of the framework is reverse-mode automatic differentiation. You build an expression out of `Value`s, call `backwards()`, and every input gets its gradient.
+
+```rust
+let a = Value::new(2.0);
+let b = Value::new(5.0);
+let out = a * b + a;
+
+out.backwards();
+
+assert_close(a.grad(), 6.0, 1e-6); // d(ab + a)/da = b + 1
+assert_close(b.grad(), 2.0, 1e-6); // d(ab + a)/db = a
+```
+
+The graph lives on a tape: one `Vec` of nodes, and a `Value` is just an index into it. Nodes are stored in the order they were created, so walking the tape backwards is already a valid order for the backward pass, and there are no `Rc<RefCell<...>>` borrow fights.
+
+Every backward rule is checked against finite differences, `(f(x + h) - f(x - h)) / 2h`, so I'm not just trusting my own derivatives.
+
+### Fitting a curve with it
+
+Before autograd I fit a polynomial to some points with gradients I derived by hand. Now the same demo uses autograd: the six coefficients are `Value`s, the loss is an expression, and `backwards()` does the calculus.
+
+| Epoch 60 | Epoch 1,360 | Epoch 16,440 |
+| --- | --- | --- |
+| ![Epoch 60, loss 1.26](assets/autograd-fit-1.png) | ![Epoch 1360, loss 0.65](assets/autograd-fit-2.png) | ![Epoch 16440, loss 0.0004](assets/autograd-fit-3.png) |
+| loss 1.26 | loss 0.65 | loss 0.0004 |
+
+## Neuroevolution on Flappy Bird
+
+This is where the project started, before any gradients. A thousand birds start with random weights and play the same pipes at the same time, and the ones that survive longest get to have children.
 
 Generation 0, where the networks are still random:
 
@@ -18,29 +61,40 @@ Generation 1, after one round of selection and mutation:
 
 ![Generation 1](assets/generation-1.png)
 
-No training data, no labels, no gradients. The birds that crash early just stop having children.
-
-## How the evolution works
-
-In this version, every bird has a `5 → 10 → 1` network. It takes in the bird's height, its velocity, how far away the pipe is, the height of the gap, and the vertical distance between the bird and that gap. If the output comes out above 0 the bird flaps.
+Every bird has a `5 → 10 → 1` network. It takes in the bird's height, its velocity, how far away the pipe is, the height of the gap, and the vertical distance between the bird and that gap. If the output comes out above 0 the bird flaps.
 
 Once the last bird dies I sort them by how many frames they survived and keep the top 20 as parents. How many children a parent gets depends on where it ranked. Each parent passes on one exact copy of itself and the rest of its children get mutated.
 
-There's a `bot_mode` flag in [`src/flappybird/mod.rs`](src/flappybird/mod.rs). Set it to false and you can play the game yourself with the spacebar.
+There's a `bot_mode` flag in [`src/games/flappy.rs`](src/games/flappy.rs). Set it to false and you can play the game yourself with the spacebar. The network and mutation code is in [`src/evo/network.rs`](src/evo/network.rs).
 
-The network code is in [`src/network.rs`](src/network.rs). Dense layers, a forward pass, tanh on the output, and the mutation function.
+Later this becomes a baseline: the plan is to train a DQN agent on the same game with this framework and compare the two.
 
 ## What's next
 
-I'm working on backprop at the moment, fitting a polynomial to a target curve with gradient descent before I try the same thing on the network.
+1. A scalar MLP that learns XOR, which proves the nonlinearity and backward pass work end to end.
+2. N-dimensional tensors with strides, so transposes and broadcasts are free.
+3. Autograd on tensors, including the tricky parts: summing gradients back through broadcasting, and matmul backward.
+4. `Linear`, `Sequential`, Adam, and a 784 → 128 → 10 MLP that gets 97% or more on MNIST.
 
-After that, activation functions as an enum, loss functions and an optimizer, and then reinforcement learning, which is the part I'm most interested in.
+## Layout
+
+```
+src/
+  scalar/     Value, the tape, backward pass, gradient check
+  evo/        neuroevolution network
+  games/      Flappy Bird and Pong
+  testutil.rs assert_close
+examples/     one runnable demo per file
+models/       saved Flappy Bird weights
+assets/       screenshots
+```
 
 ## Running it
 
 ```bash
-cargo run --release --example flappy
+cargo test
 cargo run --release --example polyfit
+cargo run --release --example flappy
 cargo run --release --example pong
 ```
 
