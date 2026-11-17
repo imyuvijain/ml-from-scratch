@@ -103,6 +103,9 @@ fn plot(x: f32, y: f32, color: Color) {
     draw_circle(sx, sy, 4.0, color);
 }
 
+
+
+
 pub async fn run() {
     // f(x) = 0.025x^5 - 0.521x^3 + 1.936x
     let sample_points: Vec<Point> = vec![

@@ -95,6 +95,3 @@ mod tests {
         assert!(output[0].data() > -1.0 && output[0].data() < 1.0);
     }
 }
-
-
-

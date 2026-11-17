@@ -1,4 +1,5 @@
 pub mod gradcheck;
+pub mod nn;
 
 use std::{
     cell::RefCell,
@@ -11,22 +12,18 @@ thread_local! {
     static TAPE: RefCell<Vec<Node>> = RefCell::new(Vec::new());
 }
 
-
 pub fn zero_grads() {
         TAPE.with(|tape| {
             let mut t = tape.borrow_mut();
-
             for node in t.iter_mut() {
                 node.grad = 0.0;
             }
-
         })
 }
 
 fn _display_tape() {
     TAPE.with(|tape| {
             let t = tape.borrow();
-
             for node in t.iter() {
                 dbg!(node);
             }
@@ -128,6 +125,10 @@ impl Value {
         Value::push(self.data().powf(n), Op::Pow(self.0, n))
     }
 
+    pub fn update(self, learning_rate: f32) {
+        self.set_data(self.data() - learning_rate*self.grad());
+    }
+ 
     pub fn backwards(self) {
         TAPE.with(|tape| {
             let mut t = tape.borrow_mut();
