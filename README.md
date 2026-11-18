@@ -93,8 +93,18 @@ assets/       screenshots
 ```bash
 cargo test
 cargo run --release --example polyfit
+cargo run --release --example xor
 cargo run --release --example flappy
 cargo run --release --example pong
 ```
+
+### Playing Flappy Bird yourself
+
+Flappy Bird starts in bot mode, where a thousand birds are trained by neuroevolution. To play it yourself, open [`src/games/flappy.rs`](src/games/flappy.rs), set `bot_mode` to `false` at the top of `run()`, and run the flappy example again.
+
+| Mode | Controls |
+| --- | --- |
+| Bot (`bot_mode = true`) | `Enter` kills the current generation and skips to the next. `Esc` prints the best two networks and quits. |
+| Play (`bot_mode = false`) | `Space` flaps. `Esc` quits. |
 
 Rust 2024 edition, macroquad for the rendering.
