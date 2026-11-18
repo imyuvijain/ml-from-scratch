@@ -10,16 +10,22 @@ None of the code in this repository was written by AI. I type all of it myself. 
 
 ## Where it is
 
-| Phase | What | Status |
-| --- | --- | --- |
-| 0 | Library crate, examples, test harness | Done |
-| 1 | Scalar autograd | In progress: backward pass, gradient check and polynomial fit done, XOR MLP next |
-| 2 | Tensors: shape, strides, broadcasting, matmul | Not started |
-| 3 | Tensor autograd, every op gradient-checked | Not started |
-| 4 | `nn` modules, SGD and Adam, MNIST | Not started |
-| 5 | Fast matmul: loop order, tiling, rayon, benchmarks | Not started |
-| 6 | Reinforcement learning: Q-learning, DQN, REINFORCE | Not started |
-| 7 | Browser demo, CNN, tiny GPT | Not started |
+**Working now**
+
+- **Scalar autograd.** A `Value` type backed by a tape, with `+`, `-`, `*`, `pow`, `exp`, `tanh` and `relu`. Calling `backwards()` walks the tape in reverse and fills in every gradient.
+- **Gradient checking.** Every op is tested against finite differences, so a wrong derivative fails a test instead of quietly training badly.
+- **Polynomial fit.** Gradient descent through the autograd recovers the coefficients of a curve.
+- **XOR MLP.** A 2 → 4 → 1 network built from scalar neurons learns XOR, which proves the nonlinearity and backward pass work end to end.
+- **Neuroevolution on Flappy Bird.** Birds with tiny networks learn to play through mutation and selection, no gradients involved (more below).
+
+**Coming soon**
+
+- **Tensors.** N-dimensional arrays with shape and strides, so transposes and broadcasts are views rather than copies, plus matmul.
+- **Tensor autograd.** Every op gradient-checked, including the tricky parts: summing gradients back through broadcast dimensions and matmul backward.
+- **`nn` modules and optimizers.** `Linear`, `Sequential`, SGD and Adam, aiming for 97%+ on MNIST with a 784 → 128 → 10 MLP.
+- **Fast matmul.** Loop reordering, cache tiling and `rayon`, with benchmarks for each step.
+- **Reinforcement learning.** Q-learning, DQN and REINFORCE, playing the games in this repo.
+- **Later.** A CNN, a tiny GPT, and a browser demo.
 
 ## Autograd
 
@@ -68,13 +74,6 @@ Once the last bird dies I sort them by how many frames they survived and keep th
 There's a `bot_mode` flag in [`src/games/flappy.rs`](src/games/flappy.rs). Set it to false and you can play the game yourself with the spacebar. The network and mutation code is in [`src/evo/network.rs`](src/evo/network.rs).
 
 Later this becomes a baseline: the plan is to train a DQN agent on the same game with this framework and compare the two.
-
-## What's next
-
-1. A scalar MLP that learns XOR, which proves the nonlinearity and backward pass work end to end.
-2. N-dimensional tensors with strides, so transposes and broadcasts are free.
-3. Autograd on tensors, including the tricky parts: summing gradients back through broadcasting, and matmul backward.
-4. `Linear`, `Sequential`, Adam, and a 784 → 128 → 10 MLP that gets 97% or more on MNIST.
 
 ## Layout
 
